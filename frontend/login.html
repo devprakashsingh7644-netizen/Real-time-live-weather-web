@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Tracker — Admin Login</title>
+  <meta name="description" content="Admin login for Live Tracker GPS dashboard.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0b0f1e;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* Animated background */
+    .bg-orbs {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    }
+    .orb {
+      position: absolute; border-radius: 50%; filter: blur(120px); opacity: 0.25;
+      animation: floatOrb 10s ease-in-out infinite;
+    }
+    .orb1 { width: 500px; height: 500px; background: #4f46e5; top: -150px; left: -150px; }
+    .orb2 { width: 400px; height: 400px; background: #7c3aed; bottom: -100px; right: -100px; animation-delay: -5s; }
+    .orb3 { width: 300px; height: 300px; background: #2563eb; top: 40%; left: 50%; animation-delay: -3s; }
+
+    @keyframes floatOrb {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(40px, -30px) scale(1.08); }
+      66% { transform: translate(-30px, 20px) scale(0.94); }
+    }
+
+    .login-wrap {
+      position: relative; z-index: 1;
+      width: 100%; max-width: 420px; padding: 20px;
+    }
+
+    .card {
+      background: rgba(15, 20, 40, 0.85);
+      border: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(24px);
+      border-radius: 24px;
+      padding: 48px 40px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04) inset;
+    }
+
+    .logo { text-align: center; margin-bottom: 36px; }
+    .logo-icon {
+      width: 72px; height: 72px; margin: 0 auto 16px;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      border-radius: 20px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px;
+      box-shadow: 0 0 40px rgba(79,70,229,0.4);
+      animation: iconPulse 3s ease-in-out infinite;
+    }
+    @keyframes iconPulse {
+      0%, 100% { box-shadow: 0 0 40px rgba(79,70,229,0.4); }
+      50% { box-shadow: 0 0 60px rgba(79,70,229,0.6); }
+    }
+    .logo h1 {
+      font-size: 1.8rem; font-weight: 800; letter-spacing: -0.5px;
+      background: linear-gradient(90deg, #818cf8, #c4b5fd);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .logo p { color: #64748b; font-size: 0.85rem; margin-top: 4px; }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(79,70,229,0.15); border: 1px solid rgba(79,70,229,0.3);
+      color: #818cf8; font-size: 0.75rem; font-weight: 600;
+      padding: 4px 12px; border-radius: 100px; margin-bottom: 28px;
+      letter-spacing: 0.5px;
+    }
+    .badge .dot {
+      width: 6px; height: 6px; background: #818cf8; border-radius: 50%;
+      animation: blink 1.5s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    label {
+      display: block; font-size: 0.78rem; font-weight: 600;
+      color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px;
+      margin-bottom: 8px;
+    }
+    .field { margin-bottom: 20px; }
+
+    input {
+      width: 100%; padding: 13px 16px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px; color: #f1f5f9;
+      font-family: 'Inter', sans-serif; font-size: 0.95rem;
+      outline: none; transition: all 0.2s;
+    }
+    input:focus {
+      border-color: #4f46e5;
+      background: rgba(79,70,229,0.08);
+      box-shadow: 0 0 0 3px rgba(79,70,229,0.15);
+    }
+    input::placeholder { color: #334155; }
+
+    .btn-login {
+      width: 100%; padding: 14px;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      border: none; border-radius: 12px;
+      color: white; font-family: 'Inter', sans-serif;
+      font-size: 1rem; font-weight: 700; cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 20px rgba(79,70,229,0.35);
+      margin-top: 8px;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-login:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(79,70,229,0.5); }
+    .btn-login:active { transform: translateY(0); }
+    .btn-login:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    .error-msg {
+      background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.25);
+      color: #fca5a5; border-radius: 10px; padding: 11px 14px;
+      font-size: 0.82rem; margin-bottom: 16px; display: none;
+      animation: shake 0.4s ease;
+    }
+    @keyframes shake {
+      0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)}
+    }
+
+    .hint {
+      text-align: center; margin-top: 20px;
+      font-size: 0.75rem; color: #334155;
+    }
+    .hint code {
+      color: #4f46e5; background: rgba(79,70,229,0.1);
+      padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-orbs">
+    <div class="orb orb1"></div>
+    <div class="orb orb2"></div>
+    <div class="orb orb3"></div>
+  </div>
+
+  <div class="login-wrap">
+    <div class="card">
+      <div class="logo">
+        <div class="logo-icon">📡</div>
+        <h1>Live Tracker</h1>
+        <p>Real-time GPS location tracking system</p>
+      </div>
+
+      <div style="text-align:center;">
+        <span class="badge"><span class="dot"></span> ADMIN PANEL</span>
+      </div>
+
+      <div id="errMsg" class="error-msg"></div>
+
+      <form id="loginForm">
+        <div class="field">
+          <label for="username">Username</label>
+          <input type="text" id="username" placeholder="admin" value="admin" autocomplete="username" required>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="••••••••" value="admin123" autocomplete="current-password" required>
+        </div>
+        <button class="btn-login" id="loginBtn" type="submit">
+          🔐 Sign In to Dashboard
+        </button>
+      </form>
+
+      <div class="hint">
+        Demo credentials: <code>admin</code> / <code>admin123</code>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Redirect if already logged in as viewer
+    try {
+      const u = JSON.parse(localStorage.getItem('lt_user') || '{}');
+      if (localStorage.getItem('lt_token') && u.role === 'viewer') {
+        window.location.href = '/index.html';
+      }
+    } catch(e) {}
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('loginBtn');
+      const err = document.getElementById('errMsg');
+      err.style.display = 'none';
+      btn.disabled = true;
+      btn.textContent = '⏳ Signing in...';
+
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: document.getElementById('username').value.trim(),
+            password: document.getElementById('password').value
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Login failed');
+
+        localStorage.setItem('lt_token', data.token);
+        localStorage.setItem('lt_user', JSON.stringify(data.user));
+        window.location.href = '/index.html';
+      } catch (ex) {
+        err.textContent = '❌ ' + ex.message;
+        err.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = '🔐 Sign In to Dashboard';
+      }
+    });
+  </script>
+</body>
+</html>

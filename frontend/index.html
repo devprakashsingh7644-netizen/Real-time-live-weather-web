@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atmosphere Live — Command Center</title>
+  <meta name="description" content="Premium real-time atmospheric monitoring platform.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="assets/dashboard.css">
+</head>
+<body>
+
+<!-- Loading Screen -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="loader-ring"></div>
+  <div class="loader-text">Initializing Atmosphere Live...</div>
+</div>
+
+<!-- Ambient Particles -->
+<div class="particles" id="particles"></div>
+
+<div class="app">
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+
+    <!-- Header -->
+    <div class="sidebar-top">
+      <h1><span class="live-dot"></span> Atmosphere Live</h1>
+      <div class="conn-status" id="connStatus">Connecting...</div>
+    </div>
+
+    <!-- Live Time & Weather Widgets -->
+    <div class="widgets-row">
+      <div class="widget">
+        <div class="widget-icon">🕐</div>
+        <div class="widget-val" id="widgetTime">--:--</div>
+        <div class="widget-label">Local Time</div>
+      </div>
+      <div class="widget">
+        <div class="widget-icon" id="widgetWeatherIcon">🌡️</div>
+        <div class="widget-val" id="widgetTemp">--°C</div>
+        <div class="widget-label">Weather</div>
+      </div>
+      <div class="widget">
+        <div class="widget-icon">📡</div>
+        <div class="widget-val" id="deviceCount">0</div>
+        <div class="widget-label">Sessions</div>
+      </div>
+    </div>
+
+    <!-- Generate Live Session Panel -->
+    <div class="gen-panel">
+      <h3>✦ Generate Live Session</h3>
+      <div class="gen-row">
+        <input class="gen-input" id="newDeviceName" placeholder="Session name (optional)">
+        <button class="btn-gen" id="generateBtn" onclick="window.generateLink()">Create</button>
+      </div>
+      <div class="link-result" id="linkResult">
+        <div class="link-label">✅ Session Link Ready</div>
+        <div class="link-url" id="linkUrl"></div>
+        <div class="link-actions">
+          <button class="btn-copy" onclick="copyLink()">📋 Copy</button>
+          <button class="btn-qr" onclick="showQR()">📱 QR Code</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Sessions List -->
+    <div class="devices-section" id="devicesSection">
+      <div class="section-hdr">
+        ◉ Active Sessions <span class="cnt" id="deviceCountBadge">0</span>
+      </div>
+      <div id="deviceList">
+        <div class="no-devices" id="noDevices">
+          <div class="icon">◎</div>
+          <p>Create a session and share the link to begin monitoring.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Session Info Panel -->
+    <div class="info-section" id="infoSection" style="display:none;">
+      <h3 style="display:flex;align-items:center;justify-content:space-between;">
+        <span>◈ Session Data — <span id="infoName" style="color:#a78bfa;"></span></span>
+        <button onclick="closeInfoPanel()" style="background:none;border:none;color:#64748b;font-size:1rem;cursor:pointer;padding:0 4px;line-height:1;" title="Close">✕</button>
+      </h3>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="stat-label">Speed</div><div class="stat-val speed" id="iSpeed">—</div></div>
+        <div class="stat-box"><div class="stat-label">Accuracy</div><div class="stat-val acc" id="iAcc">—</div></div>
+        <div class="stat-box"><div class="stat-label">Heading</div><div class="stat-val heading" id="iHeading">—</div></div>
+        <div class="stat-box"><div class="stat-label">City</div><div class="stat-val city" id="iCity">—</div></div>
+        <div class="stat-box"><div class="stat-label">Region</div><div class="stat-val region" id="iRegion">—</div></div>
+        <div class="stat-box"><div class="stat-label">Country</div><div class="stat-val country" id="iCountry">—</div></div>
+    </div>
+    </div>
+
+    <!-- Boundary Zone Section -->
+    <div class="geo-section" id="geoSection" style="display:none;">
+      <h3 style="display:flex;align-items:center;justify-content:space-between;">
+        <span>◌ Boundary Zone <span class="geo-breach-badge" id="breachBadge" style="display:none;">ALERT!</span></span>
+        <button onclick="document.getElementById('geoSection').style.display='none'" style="background:none;border:none;color:#64748b;font-size:1rem;cursor:pointer;padding:0 4px;line-height:1;" title="Close">✕</button>
+      </h3>
+      <div class="geo-row">
+        <input type="range" id="geoRadiusSlider" min="50" max="5000" step="50" value="500" style="flex:1; accent-color: #6366f1;">
+        <input class="geo-input" type="number" id="geoRadius" placeholder="Radius m" value="500" min="50" style="width:80px; flex:none;">
+      </div>
+      <div class="geo-btn-row">
+        <button class="btn-set-geo" onclick="setGeoAtDevice()">📍 Set at Current Position</button>
+        <button class="btn-clr-geo" onclick="clearGeo()">✕</button>
+      </div>
+      <p class="geo-hint">Click anywhere on the map to place the zone center.</p>
+    </div>
+
+    <!-- Alerts Panel -->
+    <div class="alerts-panel" id="alertsPanel"></div>
+  </aside>
+
+  <!-- ── MAP ── -->
+  <div class="map-wrap">
+    <!-- Map Layer Toggle -->
+    <div class="map-ctrl">
+      <button class="map-btn active" id="btnSat" onclick="switchLayer('satellite')">🛰 Satellite</button>
+      <button class="map-btn" id="btnStreet" onclick="switchLayer('street')">🗺 Street</button>
+      <button class="map-btn" id="btnDark" onclick="switchLayer('dark')">🌑 Dark</button>
+    </div>
+
+    <div id="map"></div>
+
+    <!-- Alerts (bottom right) -->
+    <div class="alerts-panel" id="alertsPanel"></div>
+  </div>
+</div>
+
+<!-- Fullscreen Breach Alert -->
+<div class="critical-alert-overlay" id="criticalAlert" style="display:none; position:fixed; z-index:10000; align-items:center; justify-content:center;">
+  <div class="critical-box">
+    <div class="icon">🚨</div>
+    <h2>Zone Alert!</h2>
+    <p id="criticalAlertMsg">Session has left the designated boundary zone.</p>
+    <button class="btn-dismiss" onclick="dismissCriticalAlert()">Acknowledge</button>
+  </div>
+</div>
+
+<!-- QR Modal -->
+<div class="modal-overlay" id="qrModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeQR()">✕</button>
+    <h3>📱 Session QR Code</h3>
+    <p>Scan to open the live session link</p>
+    <canvas id="qrCanvas" width="220" height="220"></canvas>
+    <div style="margin-top:14px; font-size:0.75rem; color:var(--muted);" id="qrDeviceName"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  // ── Particles ──
+  const pContainer = document.getElementById('particles');
+  for (let i = 0; i < 30; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.cssText = `left:${Math.random()*100}%; width:${Math.random()*3+1}px; height:${Math.random()*3+1}px; animation-duration:${Math.random()*15+10}s; animation-delay:${Math.random()*10}s;`;
+    pContainer.appendChild(p);
+  }
+
+  // ── Live Clock ──
+  function updateClock() {
+    const now = new Date();
+    document.getElementById('widgetTime').textContent = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // ── Weather via Open-Meteo (get coords from IP first) ──
+  async function fetchWeather() {
+    try {
+      const ip = await fetch('https://ipapi.co/json/').then(r=>r.json()).catch(()=>null);
+      if (!ip || !ip.latitude) return;
+      const w = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${ip.latitude}&longitude=${ip.longitude}&current_weather=true`).then(r=>r.json());
+      if (w.current_weather) {
+        const icons = {0:'☀️',1:'🌤',2:'⛅',3:'☁️',45:'🌫',48:'🌫',51:'🌦',53:'🌧',55:'🌧',61:'🌦',63:'🌧',65:'🌧',71:'❄️',73:'❄️',75:'❄️',80:'🌦',81:'🌧',82:'🌧',95:'⛈',96:'⛈',99:'⛈'};
+        const code = w.current_weather.weathercode;
+        document.getElementById('widgetWeatherIcon').textContent = icons[code] || '🌡️';
+        document.getElementById('widgetTemp').textContent = `${Math.round(w.current_weather.temperature)}°C`;
+      }
+    } catch(e) {}
+  }
+  fetchWeather();
+
+  // ── Hide Loading Screen ──
+  window.addEventListener('load', () => {
+    setTimeout(() => document.getElementById('loadingScreen').classList.add('hidden'), 1200);
+  });
+
+  // ── Geofence slider sync ──
+  const slider = document.getElementById('geoRadiusSlider');
+  const numInput = document.getElementById('geoRadius');
+  slider.addEventListener('input', () => { numInput.value = slider.value; });
+  numInput.addEventListener('input', () => { slider.value = numInput.value; });
+</script>
+<script src="assets/dashboard.js"></script>
+</body>
+</html>
