@@ -251,7 +251,6 @@ app.set('deviceSessions', deviceSessions);
 app.set('io', io);
 
 // ── Start server ──────────────────────────────────────────────
-// ── Start server ──────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 
 if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
